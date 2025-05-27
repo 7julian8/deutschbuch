@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Als die Welt uns gehörte - Spiel</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(145deg, #e0e0e0, #ffffff);
+            margin: 0;
+            padding: 0;
+            text-align: center;
+            color: #333;
+        }
+        h1 {
+            margin-top: 20px;
+            color: #222;
+        }
+        #game-container {
+            margin: 0 auto;
+            max-width: 420px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        #map-container {
+            position: relative;
+            width: 350px;
+            height: 260px;
+            margin: 0 auto 20px auto;
+            background: #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden;
+            touch-action: none;
+        }
+        #europe-map {
+            width: 100%;
+            height: 100%;
+            display: block;
+            user-select: none;
+            pointer-events: none;
+        }
+        .char {
+            position: absolute;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #fff;
+            font-size: 16px;
+            cursor: grab;
+            z-index: 2;
+            transition: box-shadow 0.2s;
+            touch-action: none;
+        }
+        .char.leo { background: #3b82f6; }
+        .char.max { background: #f59e42; }
+        .char.elsa { background: #e11d48; }
+        .char.dragging { box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+        #level2 {
+            display: none;
+            margin-top: 30px;
+        }
+        .option-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .option-list li {
+            margin: 10px 0;
+        }
+        .option-list label {
+            font-size: 18px;
+            cursor: pointer;
+        }
+        #result {
+            margin-top: 30px;
+            font-size: 22px;
+            color: #16a34a;
+            font-weight: bold;
+        }
+        #start-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        #start-screen input {
+            font-size: 18px;
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+        #start-btn {
+            margin-top: 12px;
+            font-size: 18px;
+            padding: 8px 16px;
+            border-radius: 6px;
+            background-color: #3b82f6;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="start-screen">
+        <h1>Willkommen zum Spiel</h1>
+        <p>Bitte gib den Aktivierungscode ein:</p>
+        <input type="text" id="activation-code" placeholder="Code eingeben">
+        <button id="start-btn">Jetzt Spiel starten</button>
+        <div id="code-msg" style="color:#e11d48;margin-top:10px;font-weight:bold;"></div>
+    </div>
+
+    <div id="game-container" style="display:none;">
+        <h1>Als die Welt uns gehörte - Spiel</h1>
+        <div id="level1">
+            <p>Ziehe die Charaktere auf der Europakarte an die Orte, wohin sie geflüchtet sind:</p>
+            <div id="map-container">
+                <img id="europe-map" src="https://cdn.pixabay.com/photo/2015/01/03/15/28/europa-587511_1280.png" alt="Europakarte">
+            </div>
+            <button id="check-btn" style="margin-top:10px;font-size:18px;">Überprüfen</button>
+            <div id="level1-msg" style="margin-top:10px;color:#e11d48;font-weight:bold;"></div>
+        </div>
+        <div id="level2">
+            <p>Wer ist Leos Freundin?</p>
+            <form id="level2-form">
+                <ul class="option-list">
+                    <li><label><input type="radio" name="friend" value="Lina"> Lina</label></li>
+                    <li><label><input type="radio" name="friend" value="Annie"> Annie</label></li>
+                    <li><label><input type="radio" name="friend" value="Amelie"> Amelie</label></li>
+                    <li><label><input type="radio" name="friend" value="Sophie"> Sophie</label></li>
+                    <li><label><input type="radio" name="friend" value="Miriam"> Miriam</label></li>
+                </ul>
+                <button type="submit" style="margin-top:12px;font-size:18px;">Antwort prüfen</button>
+            </form>
+            <div id="level2-msg" style="margin-top:10px;color:#e11d48;font-weight:bold;"></div>
+        </div>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        // Startbildschirm
+        document.getElementById('start-btn').onclick = function() {
+            const code = document.getElementById('activation-code').value.trim();
+            if (code === "LIZ") {
+                document.getElementById('start-screen').style.display = 'none';
+                document.getElementById('game-container').style.display = 'block';
+            } else {
+                document.getElementById('code-msg').innerText = "Falscher Code!";
+            }
+        };
+
+        const chars = [
+            { name: "Leo", class: "leo", label: "Leo", start: {x: 0.54, y: 0.62}, target: {x: 0.12, y: 0.34, tol: 0.09} },
+            { name: "Max", class: "max", label: "Max", start: {x: 0.54, y: 0.62}, target: {x: 0.54, y: 0.65, tol: 0.07} },
+            { name: "Elsa", class: "elsa", label: "Elsa", start: {x: 0.54, y: 0.62}, target: {x: 0.66, y: 0.52, tol: 0.07} }
+        ];
+
+        const mapContainer = document.getElementById('map-container');
+        const mapImg = document.getElementById('europe-map');
+        let charElems = [], draggingChar = null, offset = {x:0, y:0};
+
+        function percentToPx(x, y) {
+            return { x: x * mapContainer.clientWidth, y: y * mapContainer.clientHeight };
+        }
+        function pxToPercent(x, y) {
+            return { x: x / mapContainer.clientWidth, y: y / mapContainer.clientHeight };
+        }
+
+        function placeChars() {
+            charElems = [];
+            chars.forEach((c, i) => {
+                let el = document.createElement('div');
+                el.className = 'char ' + c.class;
+                el.innerText = c.label;
+                el.setAttribute('data-idx', i);
+                let pos = percentToPx(c.start.x, c.start.y);
+                el.style.left = (pos.x - 18) + 'px';
+                el.style.top = (pos.y - 18) + 'px';
+                mapContainer.appendChild(el);
+                charElems.push(el);
+            });
+        }
+
+        function setupDrag() {
+            charElems.forEach(el => {
+                el.addEventListener('touchstart', dragStart, {passive:false});
+                el.addEventListener('touchmove', dragMove, {passive:false});
+                el.addEventListener('touchend', dragEnd, {passive:false});
+                el.addEventListener('mousedown', dragStart);
+            });
+            document.addEventListener('mousemove', dragMove);
+            document.addEventListener('mouseup', dragEnd);
+        }
+
+        function dragStart(e) {
+            e.preventDefault();
+            let idx = +this.getAttribute('data-idx');
+            draggingChar = {el: this, idx: idx};
+            this.classList.add('dragging');
+            let rect = this.getBoundingClientRect();
+            let clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            let clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            offset.x = clientX - rect.left;
+            offset.y = clientY - rect.top;
+        }
+        function dragMove(e) {
+            if (!draggingChar) return;
+            e.preventDefault();
+            let mapRect = mapContainer.getBoundingClientRect();
+            let clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            let clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            let x = clientX - mapRect.left - offset.x + 18;
+            let y = clientY - mapRect.top - offset.y + 18;
+            x = Math.max(-18, Math.min(mapContainer.clientWidth-18, x));
+            y = Math.max(-18, Math.min(mapContainer.clientHeight-18, y));
+            draggingChar.el.style.left = x + 'px';
+            draggingChar.el.style.top = y + 'px';
+        }
+        function dragEnd(e) {
+            if (!draggingChar) return;
+            draggingChar.el.classList.remove('dragging');
+            draggingChar = null;
+        }
+
+        function setupLevel1() {
+            mapContainer.innerHTML = '';
+            mapContainer.appendChild(mapImg);
+            placeChars();
+            setupDrag();
+            document.getElementById('level1-msg').innerText = '';
+        }
+
+        function showLevel2() {
+            document.getElementById('level1').style.display = 'none';
+            document.getElementById('level2').style.display = 'block';
+            document.getElementById('level2-msg').innerText = '';
+        }
+
+        function showResult() {
+            document.getElementById('level2').style.display = 'none';
+            document.getElementById('result').innerText = "Danke fürs Spielen!";
+        }
+
+        setupLevel1();
+
+        document.getElementById('check-btn').onclick = function() {
+            showLevel2(); // unabhängig von Korrektheit
+        };
+
+        document.getElementById('level2-form').onsubmit = function(e) {
+            e.preventDefault();
+            let val = document.querySelector('input[name="friend"]:checked');
+            if (!val) {
+                document.getElementById('level2-msg').innerText = "Bitte wähle eine Option!";
+                return;
+            }
+            if (val.value === "Annie") {
+                showResult();
+            } else {
+                document.getElementById('level2-msg').innerText = "Leider falsch. Versuche es nochmal!";
+            }
+        };
+    </script>
+</body>
+</html>
